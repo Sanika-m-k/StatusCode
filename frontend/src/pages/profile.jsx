@@ -54,7 +54,7 @@ export const Profile = () => {
                     </div>
                   )}
                 </div>
-                <CardTitle>{user.name}</CardTitle>
+                <CardTitle>{user.name===user.email ? 'User' : user.name}</CardTitle>
                 <CardDescription>{user.email}</CardDescription>
               </CardHeader>
               <CardFooter>
@@ -74,7 +74,7 @@ export const Profile = () => {
                   <User className="h-5 w-5 text-muted-foreground mr-2" />
                   <div>
                     <p className="text-sm font-medium">Name</p>
-                    <p className="text-sm text-muted-foreground">{user.name}</p>
+                    <p className="text-sm text-muted-foreground">{user.name===user.email ? 'User' : user.name}</p>
                   </div>
                 </div>
                 

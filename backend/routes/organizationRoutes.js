@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { verifyUser } = require('../controllers/userController');
 const { authenticate } = require('../middlewares/auth');
+const { createOrganization } = require('../controllers/organizationController');
 
 router.use(authenticate);
-router.get('/verify', verifyUser);
+router.post('/create', createOrganization);
+
 
 module.exports = router;

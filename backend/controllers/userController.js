@@ -1,32 +1,25 @@
 // server/controllers/userController.js
-const jwt = require('jsonwebtoken');
+const { default: mongoose } = require('mongoose');
 const User = require('../models/User');
 
 // Verify user and create if not exists
 const verifyUser = async (req, res) => {
   try {
-    // Auth0 token is already verified by middleware
-    // Extract user info from token
-    const token = req.headers.authorization.split(' ')[1];
-    const decodedToken = jwt.decode(token);
-    
-    // Get userId from token
-    const userId =  decodedToken.sub;
-    console.log("userId", userId);
-    if (!userId) {
+    const auth0ID = req.auth.sub;
+    if (!auth0ID) {
       return res.status(400).json({ message: 'userId not found in token' });
     }
 
     // Check if user exists
-    let user = await User.findOne({ userId });
+    let user = await User.findOne({ auth0ID }).populate('organizations');
+    console.log("user found", user);
 
-    // If user doesn't exist, create new user
-    console.log("user", user);
     if (!user) {
       user = new User({
-        userId,
-        name: decodedToken.name || userId,
-        // Add any other fields you need
+        auth0ID,
+        name: 'User',
+        organizations: [],
+        createdAt: new Date(),
       });
       try {
         await user.save();
@@ -34,16 +27,16 @@ const verifyUser = async (req, res) => {
       } catch (saveErr) {
         console.error("Error saving user:", saveErr);
       }
-      
     }
 
     // Return user info
-    console.log("user found");
     return res.status(200).json({ 
       user: {
         id: user._id,
-        userId: user.userId,
-        name: user.name
+        auth0ID: user.auth0ID,
+        name: user.name,
+        createdAt: user.createdAt,
+        organizations: user.organizations,
       } 
     });
   } catch (error) {

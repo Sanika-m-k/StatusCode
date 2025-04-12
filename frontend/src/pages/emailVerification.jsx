@@ -4,9 +4,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 
 export const EmailVerification = () => {
   const { user, logout } = useAuth0();
+  console.log(user);
 
   const handleLogout = () => {
     logout({ returnTo: window.location.origin });
+  };
+
+  const handleDashboardRedirect = () => {
+    window.location.href = '/dashboard';
   };
 
   return (
@@ -28,7 +33,7 @@ export const EmailVerification = () => {
           <Button variant="outline" onClick={handleLogout}>
             Logout
           </Button>
-          <Button onClick={() => window.location.reload()}>
+          <Button onClick={handleDashboardRedirect}>
             I've Verified My Email
           </Button>
         </CardFooter>
