@@ -24,5 +24,5 @@ const UserSchema = new mongoose.Schema({
 
 // Create a compound index to ensure a user can't be added to the same organization twice
 UserSchema.index({ auth0ID: 1, 'organizations.organization': 1 }, { unique: true });
-
-module.exports = mongoose.model('User', UserSchema);
+const User = mongoose.model('User', UserSchema);
+module.exports = User;

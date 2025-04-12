@@ -4,15 +4,15 @@ import axios from 'axios';
 import { Navbar } from '../components/navbar';
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Badge } from "../components/ui/badge.jsx";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
-} from "../components/ui/dialog.jsx";
+} from "../components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,30 +22,69 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs.jsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/ui/table.jsx";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label.jsx";
+import { Label } from "../components/ui/label";
+import { Textarea } from "../components/ui/textarea.jsx";
+import { Checkbox } from "../components/ui/checkbox.jsx";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select.jsx";
-import { ChevronDown, Plus, Building } from 'lucide-react';
+} from "../components/ui/select";
+import { ChevronDown, Plus, Building, Edit, AlertTriangle, Check, CheckCircle, XCircle, AlertCircle, ExternalLink } from 'lucide-react';
 
 export const Dashboard = () => {
-
   const { user, getAccessTokenSilently } = useAuth0();
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedOrg, setSelectedOrg] = useState(null);
+  const [activeTab, setActiveTab] = useState("overview");
   const [isCreateOrgDialogOpen, setIsCreateOrgDialogOpen] = useState(false);
+  const [isCreateServiceDialogOpen, setIsCreateServiceDialogOpen] = useState(false);
+  const [isEditServiceDialogOpen, setIsEditServiceDialogOpen] = useState(false);
+  const [isCreateIncidentDialogOpen, setIsCreateIncidentDialogOpen] = useState(false);
+  const [isEditIncidentDialogOpen, setIsEditIncidentDialogOpen] = useState(false);
+  const [isEditOrgDialogOpen, setIsEditOrgDialogOpen] = useState(false);
   const [newOrgData, setNewOrgData] = useState({
     name: '',
     domain: '',
     info: '',
     employeeCount: ''
   });
+  const [selectedService, setSelectedService] = useState(null);
+  const [selectedIncident, setSelectedIncident] = useState(null);
+  const [newServiceData, setNewServiceData] = useState({
+    name: '',
+    description: '',
+    status: 'operational'
+  });
+  const [newIncidentData, setNewIncidentData] = useState({
+    title: '',
+    description: '',
+    affectedService: [],
+    status: 'investigating',
+    sendEmail: false
+  });
+
+  
+  const [services, setServices] = useState();
+  const [incidents, setIncidents] = useState([]);
 
   // Employee range options
   const employeeRanges = [
@@ -55,6 +94,22 @@ export const Dashboard = () => {
     { value: "201-500", label: "201-500 employees" },
     { value: "501-1000", label: "501-1000 employees" },
     { value: "1001+", label: "1001+ employees" }
+  ];
+
+  // Service status options
+  const serviceStatuses = [
+    { value: "operational", label: "Operational", icon: <CheckCircle className="h-4 w-4 text-green-500 mr-2" /> },
+    { value: "degraded", label: "Degraded Performance", icon: <AlertCircle className="h-4 w-4 text-yellow-500 mr-2" /> },
+    { value: "partial_outage", label: "Partial Outage", icon: <AlertTriangle className="h-4 w-4 text-orange-500 mr-2" /> },
+    { value: "major_outage", label: "Major Outage", icon: <XCircle className="h-4 w-4 text-red-500 mr-2" /> }
+  ];
+
+  // Incident status options
+  const incidentStatuses = [
+    { value: "investigating", label: "Investigating", color: "bg-yellow-500" },
+    { value: "identified", label: "Identified", color: "bg-blue-500" },
+    { value: "monitoring", label: "Monitoring", color: "bg-purple-500" },
+    { value: "resolved", label: "Resolved", color: "bg-green-500" }
   ];
 
   useEffect(() => {
@@ -89,6 +144,46 @@ export const Dashboard = () => {
       fetchUserInfo();
     }
   }, [user, getAccessTokenSilently]);
+
+  useEffect(() => {
+    const fetchservices = async () => {
+      try {
+        const token = await getAccessTokenSilently();
+        const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/organizations/services`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'OrganizationId': selectedOrg._id,
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = response.data;
+        setServices(data);
+      } catch (error) {
+        console.error('Error fetching services:', error);
+      }
+    };
+    const fetchIncidents = async () => {
+      try {
+        const token = await getAccessTokenSilently();
+        const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/organizations/incidents`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'OrganizationId': selectedOrg._id,
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = response.data;
+        console.log(data);
+        setIncidents(data);
+      } catch (error) {
+        console.error('Error fetching incidents:', error);
+      }
+    };
+    if (selectedOrg) {
+      fetchservices();
+      fetchIncidents();
+    }
+  }, [selectedOrg]);
 
   const handleCreateOrganization = async () => {
     try {
@@ -153,6 +248,315 @@ export const Dashboard = () => {
     }));
   };
 
+  const handleServiceInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewServiceData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleServiceStatusChange = (value) => {
+    setNewServiceData(prev => ({
+      ...prev,
+      status: value
+    }));
+  };
+
+  const handleIncidentInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewIncidentData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleIncidentStatusChange = (value) => {
+    setNewIncidentData(prev => ({
+      ...prev,
+      status: value
+    }));
+  };
+
+  const handleIncidentServiceChange = (selectedValue) => {
+    setNewIncidentData(prev => ({
+      ...prev,
+      affectedService: selectedValue
+    }));
+  };
+
+  const handleIncidentEmailChange = (checked) => {
+    setNewIncidentData(prev => ({
+      ...prev,
+      sendEmail: checked
+    }));
+  };
+
+  const handleCreateService = async() => {
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await axios.post(
+        `${process.env.REACT_APP_BACKEND_URL}/api/organizations/create_service`,
+        newServiceData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'OrganizationId': selectedOrg._id,
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+      const createdService = response.data.service;
+      console.log('New service created:', createdService);
+      setServices([...services, createdService]);
+    } catch (error) {
+      console.error('Error creating service:', error);
+    }
+    setNewServiceData({
+      name: '',
+      description: '',
+      status: 'operational'
+    });
+    setIsCreateServiceDialogOpen(false);
+  };
+
+  const handleEditService = async() => {
+    try {
+      const token = await getAccessTokenSilently();
+      console.log('Selected service:', selectedService);
+      const response = await axios.put(
+      `${process.env.REACT_APP_BACKEND_URL}/api/organizations/update_service`,
+      { serviceId: selectedService._id, ...newServiceData },
+      {
+        headers: {
+        'Content-Type': 'application/json',
+        'OrganizationId': selectedOrg._id,
+        'Authorization': `Bearer ${token}`,
+        },
+      }
+      );
+      const updatedService = response.data.service;
+      const updatedServices = services.map(service => 
+      service.id === updatedService.id ? updatedService : service
+      );
+      setServices(updatedServices);
+    } catch (error) {
+      console.error('Error updating service:', error);
+    }
+    setNewServiceData({
+      name: '',
+      description: '',
+      status: 'operational'
+    });
+    setSelectedService(null);
+    setIsEditServiceDialogOpen(false);
+  };
+
+  const handleCreateIncident = async() => {
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await axios.post(
+      `${process.env.REACT_APP_BACKEND_URL}/api/organizations/create_incident`,
+      newIncidentData,
+      {
+        headers: {
+        'Content-Type': 'application/json',
+        'OrganizationId': selectedOrg._id,
+        'Authorization': `Bearer ${token}`,
+        },
+      }
+      );
+      const newIncident = response.data.incident;
+      console.log('New incident created:', newIncident);
+      setIncidents([...incidents, newIncident]);
+    } catch (error) {
+      console.error('Error creating incident:', error);
+    }
+    setNewIncidentData({
+      title: '',
+      description: '',
+      serviceId: '',
+      status: 'investigating',
+      sendEmail: false
+    });
+    setIsCreateIncidentDialogOpen(false);
+  };
+
+  const handleEditIncident = async() => {
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await axios.put(
+      `${process.env.REACT_APP_BACKEND_URL}/api/organizations/update_incident`,
+      { 
+        incidentId: selectedIncident._id,
+        ...newIncidentData
+      },
+      {
+        headers: {
+        'Content-Type': 'application/json',
+        'OrganizationId': selectedOrg._id,
+        'Authorization': `Bearer ${token}`,
+        },
+      }
+      );
+      const updatedIncident = response.data.incident;
+      const updatedIncidents = incidents.map(incident => 
+      incident.id === updatedIncident.id ? updatedIncident : incident
+      );
+      setIncidents(updatedIncidents);
+    } catch (error) {
+      console.error('Error updating incident:', error);
+    }
+    setNewIncidentData({
+      title: '',
+      description: '',
+      serviceId: '',
+      status: 'investigating',
+      sendEmail: false
+    });
+    setSelectedIncident(null);
+    setIsEditIncidentDialogOpen(false);
+  };
+
+  const handleEditOrganization = async() => {
+    // In a real application, this would make an API call
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await axios.put(
+      `${process.env.REACT_APP_BACKEND_URL}/api/organizations/update`,
+      newOrgData,
+      {
+        headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'organizationId': selectedOrg._id
+        },
+      }
+      );
+      const updatedOrg = response.data.organization;
+      setSelectedOrg(updatedOrg);
+    } catch (error) {
+      console.error('Error updating organization:', error);
+    }
+    setNewOrgData({
+      name: '',
+      domain: '',
+      info: '',
+      employeeCount: ''
+    });
+    setIsEditOrgDialogOpen(false);
+  };
+
+  const openEditServiceDialog = (service) => {
+    setSelectedService(service);
+    setNewServiceData({
+      name: service.name,
+      description: service.description,
+      status: service.status
+    });
+    setIsEditServiceDialogOpen(true);
+  };
+
+  const openEditIncidentDialog = (incident) => {
+    setSelectedIncident(incident);
+    setNewIncidentData({
+      title: incident.title,
+      description: incident.description,
+      serviceId: incident.serviceId,
+      status: incident.status,
+      sendEmail: false // Assuming default is false for edit
+    });
+    setIsEditIncidentDialogOpen(true);
+  };
+
+  const openEditOrgDialog = () => {
+    setNewOrgData({
+      name: selectedOrg.name,
+      domain: selectedOrg.domain || '',
+      info: selectedOrg.info || '',
+      employeeCount: selectedOrg.employeeCount || ''
+    });
+    setIsEditOrgDialogOpen(true);
+  };
+
+  const getServiceStatusBadge = (status) => {
+    switch (status) {
+      case 'operational':
+        return <Badge className="bg-green-500">Operational</Badge>;
+      case 'degraded':
+        return <Badge className="bg-yellow-500">Degraded</Badge>;
+      case 'partial_outage':
+        return <Badge className="bg-orange-500">Partial Outage</Badge>;
+      case 'major_outage':
+        return <Badge className="bg-red-500">Major Outage</Badge>;
+      default:
+        return <Badge>Unknown</Badge>;
+    }
+  };
+
+  const getIncidentStatusBadge = (status) => {
+    const incidentStatus = incidentStatuses.find(s => s.value === status);
+    return <Badge className={incidentStatus?.color || "bg-gray-500"}>{incidentStatus?.label || status}</Badge>;
+  };
+
+  const getServiceNameById = (id) => {
+    const service = services.find(s => s._id === id);
+    return service ? service.name : 'Unknown Service';
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString();
+  };
+
+  // Calculate overall system status
+  const calculateSystemStatus = () => {
+    if (services.some(s => s.status === 'major_outage')) return 'major_outage';
+    if (services.some(s => s.status === 'partial_outage')) return 'partial_outage';
+    if (services.some(s => s.status === 'degraded')) return 'degraded';
+    return 'operational';
+  };
+
+  const getSystemStatusDisplay = () => {
+    const status = calculateSystemStatus();
+    const statusObj = serviceStatuses.find(s => s.value === status);
+    
+    return (
+      <div className="flex items-center">
+        {statusObj?.icon}
+        <span className={`font-medium ${status === 'operational' ? 'text-green-500' : status === 'degraded' ? 'text-yellow-500' : status === 'partial_outage' ? 'text-orange-500' : 'text-red-500'}`}>
+          {statusObj?.label || 'Unknown'}
+        </span>
+      </div>
+    );
+  };
+
+  // Count services by status
+  const countServicesByStatus = () => {
+    return {
+      operational: services.filter(s => s.status === 'operational').length,
+      degraded: services.filter(s => s.status === 'degraded').length,
+      partial_outage: services.filter(s => s.status === 'partial_outage').length,
+      major_outage: services.filter(s => s.status === 'major_outage').length
+    };
+  };
+
+  // Count incidents by status
+  const countIncidentsByStatus = () => {
+    return {
+      investigating: incidents.filter(i => i.status === 'investigating').length,
+      identified: incidents.filter(i => i.status === 'identified').length,
+      monitoring: incidents.filter(i => i.status === 'monitoring').length,
+      resolved: incidents.filter(i => i.status === 'resolved').length,
+      active: incidents.filter(i => i.status !== 'resolved').length
+    };
+  };
+
+  // Get active incidents for a service
+  const getActiveIncidentsForService = (serviceId) => {
+    return incidents.filter(i => i.serviceId === serviceId && i.status !== 'resolved').length;
+  };
+
   if (loading) {
     return (
       <div>
@@ -164,52 +568,12 @@ export const Dashboard = () => {
     );
   }
 
-  // Placeholder data for the dashboard when an organization is selected
-  const renderDashboardContent = () => {
-    if (!selectedOrg) return null;
-    
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Services</CardTitle>
-            <CardDescription>Manage your services</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>Total Services: 0</p>
-            <Button className="mt-4">Add Service</Button>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Incidents</CardTitle>
-            <CardDescription>Manage incidents and maintenance</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>Active Incidents: 0</p>
-            <Button className="mt-4">Report Incident</Button>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Status Page</CardTitle>
-            <CardDescription>Your public status page</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="mt-4">View Status Page</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
-
   // Determine if we should show the "Create Organization" button or organization selector
   const hasOrganizations = userInfo?.organizations && userInfo.organizations.length > 0;
 
   return (
     <div>
+      {!services ? <loading /> :<div>
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
@@ -254,7 +618,7 @@ export const Dashboard = () => {
         </div>
         
         {/* Welcome message */}
-        <p className="mb-4">Welcome, {user?.name === user?.email ? 'User' : user?.name}!</p>
+        <p className="mb-6">Welcome, {user?.name === user?.email ? 'User' : user?.name}!</p>
         
         {/* Show empty state or organization content */}
         {!hasOrganizations ? (
@@ -271,7 +635,282 @@ export const Dashboard = () => {
             </CardContent>
           </Card>
         ) : (
-          renderDashboardContent()
+          <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid grid-cols-4 mb-8">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="services">Services</TabsTrigger>
+              <TabsTrigger value="incidents">Incidents</TabsTrigger>
+              <TabsTrigger value="organization">Organization</TabsTrigger>
+            </TabsList>
+            
+            {/* Overview Tab */}
+            <TabsContent value="overview" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">System Status</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{getSystemStatusDisplay()}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Total Services</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{services.length}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Active Incidents</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{countIncidentsByStatus().active}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Uptime</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">99.95%</div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Service Status</CardTitle>
+                    <CardDescription>Current status of all services</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {services.map(service => (
+                        <div key={service.id} className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">{service.name}</p>
+                            <p className="text-sm text-muted-foreground">{service.description}</p>
+                          </div>
+                          <div className="flex items-center">
+                            {getActiveIncidentsForService(service.id) > 0 && (
+                              <Badge variant="outline" className="mr-2">
+                                {getActiveIncidentsForService(service.id)} active
+                              </Badge>
+                            )}
+                            {getServiceStatusBadge(service.status)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Recent Incidents</CardTitle>
+                    <CardDescription>Latest reported issues</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {incidents.length > 0 ? (
+                        incidents.slice(0, 5).map(incident => (
+                          <div key={incident.id} className="space-y-1">
+                            <div className="flex justify-between items-center">
+                              <p className="font-medium">{incident.title}</p>
+                              {getIncidentStatusBadge(incident.status)}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {getServiceNameById(incident.affectedService)} • Updated {formatDate(incident.updatedAt)}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-muted-foreground">No incidents reported</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div className="flex justify-between">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setActiveTab("services")}
+                  className="flex items-center"
+                >
+                  Manage Services
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setActiveTab("incidents");
+                    setIsCreateIncidentDialogOpen(true);
+                  }}
+                  className="flex items-center"
+                >
+                  <Plus size={16} className="mr-2" />
+                  Report Incident
+                </Button>
+              </div>
+            </TabsContent>
+            
+            {/* Services Tab */}
+            <TabsContent value="services" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Services</h2>
+                  <p className="text-muted-foreground">Manage your services and their status</p>
+                </div>
+                <Button onClick={() => setIsCreateServiceDialogOpen(true)}>
+                  <Plus size={16} className="mr-2" />
+                  Create Service
+                </Button>
+              </div>
+              
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Incidents</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {services.map(service => (
+                        <TableRow key={service.id}>
+                          <TableCell className="font-medium">{service.name}</TableCell>
+                          <TableCell>{service.description}</TableCell>
+                          <TableCell>{getServiceStatusBadge(service.status)}</TableCell>
+                          <TableCell>{getActiveIncidentsForService(service.id)}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" onClick={() => openEditServiceDialog(service)}>
+                              <Edit size={16} />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            {/* Incidents Tab */}
+            <TabsContent value="incidents" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Incidents</h2>
+                  <p className="text-muted-foreground">Manage incidents and maintenances</p>
+                </div>
+                <Button onClick={() => setIsCreateIncidentDialogOpen(true)}>
+                  <Plus size={16} className="mr-2" />
+                  Report Incident
+                </Button>
+              </div>
+              
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Service</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Updated</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {incidents.map(incident => (
+                        <TableRow key={incident.id}>
+                          <TableCell className="font-medium">{incident.title}</TableCell>
+                          <TableCell>{getServiceNameById(incident.affectedService)}</TableCell>
+                          <TableCell>{getIncidentStatusBadge(incident.status)}</TableCell>
+                          <TableCell>{formatDate(incident.createdAt)}</TableCell>
+                          <TableCell>{formatDate(incident.updatedAt)}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" onClick={() => openEditIncidentDialog(incident)}>
+                              <Edit size={16} />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            {/* Organization Tab */}
+            <TabsContent value="organization" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Organization</h2>
+                  <p className="text-muted-foreground">Manage your organization details</p>
+                </div>
+                <Button onClick={openEditOrgDialog}>
+                  <Edit size={16} className="mr-2" />
+                  Edit Organization
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Organization Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Name</p>
+                      <p className="text-lg">{selectedOrg?.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Domain</p>
+                      <p className="text-lg">{selectedOrg?.domain || "Not set"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Information</p>
+                      <p className="text-lg">{selectedOrg?.info || "No additional information"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Size</p>
+                      <p className="text-lg">{selectedOrg?.employeeCount || "Not specified"}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Status Page</CardTitle>
+                    <CardDescription>Your public-facing status page</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Status Page URL</p>
+                      <div className="flex items-center mt-1">
+                        <p className="text-lg">https://status.{selectedOrg?.domain || "yourdomain.com"}</p>
+                        <Button variant="ghost" size="sm" className="ml-2">
+                          <ExternalLink size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="pt-4">
+                      <Button variant="outline" className="w-full">
+                        View Status Page
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
         
         {/* Create Organization Dialog */}
@@ -349,7 +988,397 @@ export const Dashboard = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        {/* Edit Organization Dialog */}
+        <Dialog open={isEditOrgDialogOpen} onOpenChange={setIsEditOrgDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Edit Organization</DialogTitle>
+              <DialogDescription>
+                Update your organization details.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="edit-name"
+                  name="name"
+                  value={newOrgData.name}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-domain" className="text-right">
+                  Domain
+                </Label>
+                <Input
+                  id="edit-domain"
+                  name="domain"
+                  value={newOrgData.domain}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-info" className="text-right">
+                  Info
+                </Label>
+                <Input
+                  id="edit-info"
+                  name="info"
+                  value={newOrgData.info}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-employeeCount" className="text-right">
+                  Size
+                </Label>
+                <Select 
+                  onValueChange={handleEmployeeCountChange}
+                  value={newOrgData.employeeCount}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select company size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employeeRanges.map(range => (
+                      <SelectItem key={range.value} value={range.value}>
+                        {range.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" onClick={handleEditOrganization}>Save Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Create Service Dialog */}
+        <Dialog open={isCreateServiceDialogOpen} onOpenChange={setIsCreateServiceDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Create Service</DialogTitle>
+              <DialogDescription>
+                Add a new service to monitor.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="service-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="service-name"
+                  name="name"
+                  value={newServiceData.name}
+                  onChange={handleServiceInputChange}
+                  className="col-span-3"
+                  placeholder="Service name"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="service-description" className="text-right">
+                  Description
+                </Label>
+                <Input
+                  id="service-description"
+                  name="description"
+                  value={newServiceData.description}
+                  onChange={handleServiceInputChange}
+                  className="col-span-3"
+                  placeholder="Brief description"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="service-status" className="text-right">
+                  Status
+                </Label>
+                <Select 
+                  onValueChange={handleServiceStatusChange}
+                  value={newServiceData.status}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceStatuses.map(status => (
+                      <SelectItem key={status.value} value={status.value}>
+                        <div className="flex items-center">
+                          {status.icon}
+                          {status.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" onClick={handleCreateService}>Create</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Edit Service Dialog */}
+        <Dialog open={isEditServiceDialogOpen} onOpenChange={setIsEditServiceDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Edit Service</DialogTitle>
+              <DialogDescription>
+                Update service details and status.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-service-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="edit-service-name"
+                  name="name"
+                  value={newServiceData.name}
+                  onChange={handleServiceInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-service-description" className="text-right">
+                  Description
+                </Label>
+                <Input
+                  id="edit-service-description"
+                  name="description"
+                  value={newServiceData.description}
+                  onChange={handleServiceInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-service-status" className="text-right">
+                  Status
+                </Label>
+                <Select 
+                  onValueChange={handleServiceStatusChange}
+                  value={newServiceData.status}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceStatuses.map(status => (
+                      <SelectItem key={status.value} value={status.value}>
+                        <div className="flex items-center">
+                          {status.icon}
+                          {status.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" onClick={handleEditService}>Save Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Create Incident Dialog */}
+        <Dialog open={isCreateIncidentDialogOpen} onOpenChange={setIsCreateIncidentDialogOpen} >
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Report Incident</DialogTitle>
+              <DialogDescription>
+                Report a new incident or maintenance.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="incident-title" className="text-right">
+                  Title
+                </Label>
+                <Input
+                  id="incident-title"
+                  name="title"
+                  value={newIncidentData.title}
+                  onChange={handleIncidentInputChange}
+                  className="col-span-3"
+                  placeholder="Incident title"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="incident-service" className="text-right">
+                  Service
+                </Label>
+                <Select 
+                  onValueChange={handleIncidentServiceChange}
+                  value={newIncidentData.affectedService}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map(service => (
+                      <SelectItem key={service._id} value={service._id}>
+                        {service.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="incident-status" className="text-right">
+                  Status
+                </Label>
+                <Select 
+                  onValueChange={handleIncidentStatusChange}
+                  value={newIncidentData.status}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {incidentStatuses.map(status => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="incident-description" className="text-right pt-2">
+                  Description
+                </Label>
+                <Textarea
+                  id="incident-description"
+                  name="description"
+                  value={newIncidentData.description}
+                  onChange={handleIncidentInputChange}
+                  className="col-span-3"
+                  placeholder="Describe the incident"
+                  rows={4}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <div className="col-start-2 col-span-3 flex items-center space-x-2">
+                  <Checkbox 
+                    id="send-email" 
+                    checked={newIncidentData.sendEmail}
+                    onCheckedChange={handleIncidentEmailChange}
+                  />
+                  <Label htmlFor="send-email">Send email notification to users</Label>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" onClick={handleCreateIncident}>Create</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Edit Incident Dialog */}
+        <Dialog open={isEditIncidentDialogOpen} onOpenChange={setIsEditIncidentDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Update Incident</DialogTitle>
+              <DialogDescription>
+                Update incident details and status.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-incident-title" className="text-right">
+                  Title
+                </Label>
+                <Input
+                  id="edit-incident-title"
+                  name="title"
+                  value={newIncidentData.title}
+                  onChange={handleIncidentInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-incident-service" className="text-right">
+                  Service
+                </Label>
+                <Select 
+                  onValueChange={handleIncidentServiceChange}
+                  value={newIncidentData.serviceId}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map(service => (
+                      <SelectItem key={service.id} value={service.id}>
+                        {service.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-incident-status" className="text-right">
+                  Status
+                </Label>
+                <Select 
+                  onValueChange={handleIncidentStatusChange}
+                  value={newIncidentData.status}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {incidentStatuses.map(status => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="edit-incident-description" className="text-right pt-2">
+                  Description
+                </Label>
+                <Textarea
+                  id="edit-incident-description"
+                  name="description"
+                  value={newIncidentData.description}
+                  onChange={handleIncidentInputChange}
+                  className="col-span-3"
+                  rows={4}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <div className="col-start-2 col-span-3 flex items-center space-x-2">
+                  <Checkbox 
+                    id="edit-send-email" 
+                    checked={newIncidentData.sendEmail}
+                    onCheckedChange={handleIncidentEmailChange}
+                  />
+                  <Label htmlFor="edit-send-email">Send email notification about this update</Label>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" onClick={handleEditIncident}>Save Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
+    </div>}
     </div>
   );
 };

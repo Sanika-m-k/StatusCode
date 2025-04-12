@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(cors({
   origin: 'http://localhost:3000',  // Allow only your frontend URL
   methods: ['GET', 'POST', 'PUT', 'DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'organizationId'],
 }));
 // Routes
 
