@@ -17,7 +17,7 @@ export const Navbar = () => {
   return (
     <nav className="bg-white border-b px-6 py-3 flex items-center justify-between">
       <div>
-        <Link to="/" className="font-semibold text-xl">StatusPage</Link>
+        <Link to="/" className="font-semibold text-xl">StatusCode</Link>
       </div>
 
       <div>

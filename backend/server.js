@@ -4,14 +4,14 @@ const { connectDB } = require('./config/db');
 const userRoutes = require('./routes/userRoutes');
 const organizationRoutes = require('./routes/organizationRoutes');
 require('dotenv').config();
-
+const statusRoutes = require('./routes/statusRoute');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:3000',  // Allow only your frontend URL
+  origin: ['http://localhost:3000',process.env.FRONTEND_URL],  // Allow only your frontend URL
   methods: ['GET', 'POST', 'PUT', 'DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'organizationId'],
 }));
@@ -25,7 +25,7 @@ app.get('/', (req, res) => {
 app.use('/api/users', userRoutes);
 
 app.use('/api/organizations', organizationRoutes);
-
+app.use('/api/status', statusRoutes);
 
 
 
