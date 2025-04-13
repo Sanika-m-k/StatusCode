@@ -11,8 +11,8 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(express.json());
 app.use(cors({
-  origin: ['http://localhost:3000',process.env.FRONTEND_URL],  // Allow only your frontend URL
-  methods: ['GET', 'POST', 'PUT', 'DELETE','OPTIONS'],
+  origin: ['http://localhost:3000', process.env.FRONTEND_URL, /\.statuscode\.fun$/],  // Allow localhost, frontend URL, and wildcard domain *.statuscode.fun
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'organizationId'],
 }));
 // Routes
