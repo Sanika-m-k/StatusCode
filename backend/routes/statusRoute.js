@@ -11,11 +11,8 @@ router.get('/history', async (req, res) => {
       const origin = req.headers.origin.toLowerCase();
       const subdomain = new URL(origin).hostname.split('.')[0]; // extract subdomain
       console.log('Subdomain:', subdomain);
-      const host = req.headers.host.toLowerCase();
-      const domain = host.split(':')[0]; // remove port if present
-  console.log('Domain:', domain);
       // Find organization by domain
-      const organization = await Organization.findOne({ statusDomain: domain });
+      const organization = await Organization.findOne({ statusDomain: subdomain });
   
       if (!organization) {
         return res.status(404).json({
