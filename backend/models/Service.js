@@ -115,7 +115,7 @@ serviceSchema.pre('save', function(next) {
     this.statusHistory.push({
       status: this.status,
       timestamp: new Date(),
-      message: `Status changed to ${this.status}`
+      message: `Status set to ${this.status}`
     });
   }
   next();

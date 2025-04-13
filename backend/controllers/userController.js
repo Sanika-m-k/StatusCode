@@ -30,15 +30,7 @@ const verifyUser = async (req, res) => {
     }
 
     // Return user info
-    return res.status(200).json({ 
-      user: {
-        id: user._id,
-        auth0ID: user.auth0ID,
-        name: user.name,
-        createdAt: user.createdAt,
-        organizations: user.organizations,
-      } 
-    });
+    return res.status(200).json({user});
   } catch (error) {
     console.error('Error verifying user:', error);
     return res.status(500).json({ message: 'Server error' });

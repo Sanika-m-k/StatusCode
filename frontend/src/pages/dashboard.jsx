@@ -60,6 +60,8 @@ export const Dashboard = () => {
   const [isEditServiceDialogOpen, setIsEditServiceDialogOpen] = useState(false);
   const [isCreateIncidentDialogOpen, setIsCreateIncidentDialogOpen] = useState(false);
   const [isEditIncidentDialogOpen, setIsEditIncidentDialogOpen] = useState(false);
+  const [createserviceerror, setCreateServiceError] = useState(false);
+  const [createincidenterror, setCreateIncidentError] = useState(false);
   const [isEditOrgDialogOpen, setIsEditOrgDialogOpen] = useState(false);
   const [newOrgData, setNewOrgData] = useState({
     name: '',
@@ -77,7 +79,7 @@ export const Dashboard = () => {
   const [newIncidentData, setNewIncidentData] = useState({
     title: '',
     description: '',
-    affectedService: [],
+    affectedService: '',
     status: 'investigating',
     sendEmail: false
   });
@@ -99,7 +101,7 @@ export const Dashboard = () => {
   // Service status options
   const serviceStatuses = [
     { value: "operational", label: "Operational", icon: <CheckCircle className="h-4 w-4 text-green-500 mr-2" /> },
-    { value: "degraded", label: "Degraded Performance", icon: <AlertCircle className="h-4 w-4 text-yellow-500 mr-2" /> },
+    { value: "degraded_performance", label: "Degraded Performance", icon: <AlertCircle className="h-4 w-4 text-yellow-500 mr-2" /> },
     { value: "partial_outage", label: "Partial Outage", icon: <AlertTriangle className="h-4 w-4 text-orange-500 mr-2" /> },
     { value: "major_outage", label: "Major Outage", icon: <XCircle className="h-4 w-4 text-red-500 mr-2" /> }
   ];
@@ -294,6 +296,11 @@ export const Dashboard = () => {
 
   const handleCreateService = async() => {
     try {
+      if(!newServiceData.name || !newServiceData.description) {
+        setCreateServiceError(true);
+        return;
+      }
+      setCreateServiceError(false);
       const token = await getAccessTokenSilently();
       const response = await axios.post(
         `${process.env.REACT_APP_BACKEND_URL}/api/organizations/create_service`,
@@ -336,8 +343,10 @@ export const Dashboard = () => {
       }
       );
       const updatedService = response.data.service;
+      console.log(updatedService);
+      console.log(services);
       const updatedServices = services.map(service => 
-      service.id === updatedService.id ? updatedService : service
+      service._id === updatedService._id ? updatedService : service
       );
       setServices(updatedServices);
     } catch (error) {
@@ -354,6 +363,12 @@ export const Dashboard = () => {
 
   const handleCreateIncident = async() => {
     try {
+      console.log(newIncidentData);
+      if(!newIncidentData.title || !newIncidentData.description || !newIncidentData.affectedService) {
+        setCreateIncidentError(true);
+        return;
+      }
+      setCreateIncidentError(false);
       const token = await getAccessTokenSilently();
       const response = await axios.post(
       `${process.env.REACT_APP_BACKEND_URL}/api/organizations/create_incident`,
@@ -400,8 +415,10 @@ export const Dashboard = () => {
       }
       );
       const updatedIncident = response.data.incident;
+      console.log(updatedIncident)
+      console.log(incidents);
       const updatedIncidents = incidents.map(incident => 
-      incident.id === updatedIncident.id ? updatedIncident : incident
+      incident._id === updatedIncident._id ? updatedIncident : incident
       );
       setIncidents(updatedIncidents);
     } catch (error) {
@@ -483,7 +500,7 @@ export const Dashboard = () => {
     switch (status) {
       case 'operational':
         return <Badge className="bg-green-500">Operational</Badge>;
-      case 'degraded':
+      case 'degraded_performance':
         return <Badge className="bg-yellow-500">Degraded</Badge>;
       case 'partial_outage':
         return <Badge className="bg-orange-500">Partial Outage</Badge>;
@@ -500,7 +517,7 @@ export const Dashboard = () => {
   };
 
   const getServiceNameById = (id) => {
-    const service = services.find(s => s._id === id);
+    const service = services?.find(s => s._id === id);
     return service ? service.name : 'Unknown Service';
   };
 
@@ -511,9 +528,9 @@ export const Dashboard = () => {
 
   // Calculate overall system status
   const calculateSystemStatus = () => {
-    if (services.some(s => s.status === 'major_outage')) return 'major_outage';
-    if (services.some(s => s.status === 'partial_outage')) return 'partial_outage';
-    if (services.some(s => s.status === 'degraded')) return 'degraded';
+    if (services?.some(s => s.status === 'major_outage')) return 'major_outage';
+    if (services?.some(s => s.status === 'partial_outage')) return 'partial_outage';
+    if (services?.some(s => s.status === 'degraded_performance')) return 'degraded_performance';
     return 'operational';
   };
 
@@ -524,7 +541,7 @@ export const Dashboard = () => {
     return (
       <div className="flex items-center">
         {statusObj?.icon}
-        <span className={`font-medium ${status === 'operational' ? 'text-green-500' : status === 'degraded' ? 'text-yellow-500' : status === 'partial_outage' ? 'text-orange-500' : 'text-red-500'}`}>
+        <span className={`font-medium ${status === 'operational' ? 'text-green-500' : status === 'degraded_performance' ? 'text-yellow-500' : status === 'partial_outage' ? 'text-orange-500' : 'text-red-500'}`}>
           {statusObj?.label || 'Unknown'}
         </span>
       </div>
@@ -535,7 +552,7 @@ export const Dashboard = () => {
   const countServicesByStatus = () => {
     return {
       operational: services.filter(s => s.status === 'operational').length,
-      degraded: services.filter(s => s.status === 'degraded').length,
+      degraded: services.filter(s => s.status === 'degraded_performance').length,
       partial_outage: services.filter(s => s.status === 'partial_outage').length,
       major_outage: services.filter(s => s.status === 'major_outage').length
     };
@@ -554,7 +571,7 @@ export const Dashboard = () => {
 
   // Get active incidents for a service
   const getActiveIncidentsForService = (serviceId) => {
-    return incidents.filter(i => i.serviceId === serviceId && i.status !== 'resolved').length;
+    return incidents.filter(i => i.affectedService === serviceId && i.status !== 'resolved').length;
   };
 
   if (loading) {
@@ -573,7 +590,6 @@ export const Dashboard = () => {
 
   return (
     <div>
-      {!services ? <loading /> :<div>
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
@@ -659,7 +675,7 @@ export const Dashboard = () => {
                     <CardTitle className="text-sm font-medium">Total Services</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{services.length}</div>
+                    <div className="text-2xl font-bold">{services?.length}</div>
                   </CardContent>
                 </Card>
                 <Card>
@@ -688,16 +704,16 @@ export const Dashboard = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {services.map(service => (
-                        <div key={service.id} className="flex justify-between items-center">
+                      {services?.map(service => (
+                        <div key={service._id} className="flex justify-between items-center">
                           <div>
                             <p className="font-medium">{service.name}</p>
                             <p className="text-sm text-muted-foreground">{service.description}</p>
                           </div>
                           <div className="flex items-center">
-                            {getActiveIncidentsForService(service.id) > 0 && (
+                            {getActiveIncidentsForService(service._id) > 0 && (
                               <Badge variant="outline" className="mr-2">
-                                {getActiveIncidentsForService(service.id)} active
+                                {getActiveIncidentsForService(service._id)} active
                               </Badge>
                             )}
                             {getServiceStatusBadge(service.status)}
@@ -717,7 +733,7 @@ export const Dashboard = () => {
                     <div className="space-y-4">
                       {incidents.length > 0 ? (
                         incidents.slice(0, 5).map(incident => (
-                          <div key={incident.id} className="space-y-1">
+                          <div key={incident._id} className="space-y-1">
                             <div className="flex justify-between items-center">
                               <p className="font-medium">{incident.title}</p>
                               {getIncidentStatusBadge(incident.status)}
@@ -782,12 +798,12 @@ export const Dashboard = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {services.map(service => (
-                        <TableRow key={service.id}>
+                      {services?.map(service => (
+                        <TableRow key={service._id}>
                           <TableCell className="font-medium">{service.name}</TableCell>
                           <TableCell>{service.description}</TableCell>
                           <TableCell>{getServiceStatusBadge(service.status)}</TableCell>
-                          <TableCell>{getActiveIncidentsForService(service.id)}</TableCell>
+                          <TableCell>{getActiveIncidentsForService(service._id)}</TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="sm" onClick={() => openEditServiceDialog(service)}>
                               <Edit size={16} />
@@ -829,7 +845,7 @@ export const Dashboard = () => {
                     </TableHeader>
                     <TableBody>
                       {incidents.map(incident => (
-                        <TableRow key={incident.id}>
+                        <TableRow key={incident._id}>
                           <TableCell className="font-medium">{incident.title}</TableCell>
                           <TableCell>{getServiceNameById(incident.affectedService)}</TableCell>
                           <TableCell>{getIncidentStatusBadge(incident.status)}</TableCell>
@@ -1070,6 +1086,10 @@ export const Dashboard = () => {
               <DialogDescription>
                 Add a new service to monitor.
               </DialogDescription>
+              {createserviceerror && 
+              <DialogDescription className="text-red-500">
+                Service name and description are required.
+                </DialogDescription>}
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
@@ -1200,6 +1220,10 @@ export const Dashboard = () => {
               <DialogDescription>
                 Report a new incident or maintenance.
               </DialogDescription>
+              {createincidenterror && 
+              <DialogDescription className="text-red-500">
+                All fields are required.
+                </DialogDescription>}
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
@@ -1227,7 +1251,7 @@ export const Dashboard = () => {
                     <SelectValue placeholder="Select service" />
                   </SelectTrigger>
                   <SelectContent>
-                    {services.map(service => (
+                    {services?.map(service => (
                       <SelectItem key={service._id} value={service._id}>
                         {service.name}
                       </SelectItem>
@@ -1314,14 +1338,14 @@ export const Dashboard = () => {
                 </Label>
                 <Select 
                   onValueChange={handleIncidentServiceChange}
-                  value={newIncidentData.serviceId}
+                  value={newIncidentData.affectedService}
                 >
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select service" />
                   </SelectTrigger>
                   <SelectContent>
-                    {services.map(service => (
-                      <SelectItem key={service.id} value={service.id}>
+                    {services?.map(service => (
+                      <SelectItem key={service._id} value={service._id}>
                         {service.name}
                       </SelectItem>
                     ))}
@@ -1378,7 +1402,6 @@ export const Dashboard = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </div>}
     </div>
   );
 };

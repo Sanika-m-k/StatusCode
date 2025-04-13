@@ -1,8 +1,8 @@
-const User = require('../models/User'); // Assuming you have a User model
+const User = require('../models/User'); 
 
 const authorise_organization = async (req, res, next) => {
     try {
-        const auth0ID = req.auth.sub; // Assuming user ID is attached to req.user by authentication middleware
+        const auth0ID = req.auth.sub; 
         const organizationId = req.headers.organizationid;
         if (!organizationId) {
             return res.status(400).json({ message: 'Organization ID is required' });
