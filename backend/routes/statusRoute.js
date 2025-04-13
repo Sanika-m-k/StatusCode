@@ -7,7 +7,10 @@ const Service = require('../models/Service');
 // Get organization by domain and its services
 router.get('/history', async (req, res) => {
     try {
-      // Get domain from host header
+      // Get subdomain from origin header
+      const origin = req.headers.origin.toLowerCase();
+      const subdomain = new URL(origin).hostname.split('.')[0]; // extract subdomain
+      console.log('Subdomain:', subdomain);
       const host = req.headers.host.toLowerCase();
       const domain = host.split(':')[0]; // remove port if present
   console.log('Domain:', domain);
