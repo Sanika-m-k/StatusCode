@@ -69,11 +69,11 @@ serviceSchema.virtual('uptimePercentage').get(function() {
   }
   
   // For a simple implementation, we could calculate based on the last 30 days
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   
   const relevantHistory = this.statusHistory.filter(item => 
-    item.timestamp >= thirtyDaysAgo
+    item.timestamp >= ninetyDaysAgo
   );
   
   if (relevantHistory.length === 0) {
@@ -97,7 +97,7 @@ serviceSchema.virtual('uptimePercentage').get(function() {
     downtime += now - lastTime;
   }
   
-  const totalTime = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+  const totalTime = 90 * 24 * 60 * 60 * 1000;
   const uptimePercentage = 100 - (downtime / totalTime * 100);
   
   return Math.max(0, Math.min(100, parseFloat(uptimePercentage.toFixed(2))));

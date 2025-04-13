@@ -53,6 +53,23 @@ const updateOrganization = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 }
+const updateStatusDomain = async (req, res) => {
+    try {
+        const { statusDomain } = req.body;
+        const organizationId = req.headers.organizationid;
+        
+        const organization = await Organization.findByIdAndUpdate(
+            organizationId,
+            { statusDomain },
+            { new: true }
+        );
+
+        res.status(200).json({ message: 'Organization updated successfully', organization });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
 
 const createService = async (req, res) => {
     try {
@@ -155,4 +172,4 @@ const getIncidents = async (req, res) => {
     }
 }
 
-module.exports = { createOrganization, updateOrganization, getServices, getIncidents, createService, createIncident, updateService, updateIncident };
+module.exports = { createOrganization, updateOrganization, getServices, getIncidents, createService, createIncident, updateService, updateIncident, updateStatusDomain };

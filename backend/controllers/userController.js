@@ -1,5 +1,5 @@
 // server/controllers/userController.js
-const { default: mongoose } = require('mongoose');
+const mongoose = require('mongoose');
 const User = require('../models/user');
 
 // Verify user and create if not exists
@@ -11,9 +11,17 @@ const verifyUser = async (req, res) => {
     }
 
     // Check if user exists
-    let user = await User.findOne({ auth0ID }).populate('organizations');
+    let user = await User.findOne({ auth0ID })
+      .populate({
+        path: 'organizations',
+        populate: {
+          path: 'services',
+          model: 'Service'
+        }
+      });
+    
     console.log("user found", user);
-
+    
     if (!user) {
       user = new User({
         auth0ID,
@@ -30,10 +38,10 @@ const verifyUser = async (req, res) => {
     }
 
     // Return user info
-    return res.status(200).json({user});
+    return res.status(200).json({ user });
   } catch (error) {
     console.error('Error verifying user:', error);
-    return res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 

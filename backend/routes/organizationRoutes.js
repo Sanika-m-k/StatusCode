@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middlewares/auth');
-const { createOrganization, getServices, getIncidents, createService, createIncident, updateService, updateIncident, updateOrganization } = require('../controllers/organizationController');
+const { createOrganization, getServices, getIncidents, createService, createIncident, updateService, updateIncident, updateOrganization, updateStatusDomain } = require('../controllers/organizationController');
 const authorise_organization = require('../middlewares/authorise_organization');
 
 router.use(authenticate);
 router.post('/create', createOrganization);
 router.put('/update', authorise_organization, updateOrganization);
+router.put('/update_statusDomain', authorise_organization, updateStatusDomain)
 
 router.post('/create_service', authorise_organization, createService);
 router.put('/update_service', authorise_organization, updateService);

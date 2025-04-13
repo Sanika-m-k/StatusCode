@@ -63,6 +63,9 @@ export const Dashboard = () => {
   const [createserviceerror, setCreateServiceError] = useState(false);
   const [createincidenterror, setCreateIncidentError] = useState(false);
   const [isEditOrgDialogOpen, setIsEditOrgDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [statusDomain, setStatusDomain] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newOrgData, setNewOrgData] = useState({
     name: '',
     domain: '',
@@ -118,7 +121,7 @@ export const Dashboard = () => {
     const fetchUserInfo = async () => {
       try {
         const token = await getAccessTokenSilently();
-        
+
         // Make API call to backend with the token
         const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/users/verify`, {
           headers: {
@@ -130,7 +133,7 @@ export const Dashboard = () => {
         const data = response.data;
         console.log('Response data:', data);
         setUserInfo(data.user);
-        
+
         // If organizations exist, set the first one as selected
         if (data.user?.organizations && data.user.organizations.length > 0) {
           setSelectedOrg(data.user.organizations[0]);
@@ -187,10 +190,41 @@ export const Dashboard = () => {
     }
   }, [selectedOrg]);
 
+  const handleSaveDomain = async () => {
+    setIsSubmitting(true);
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await axios.put(
+        `${process.env.REACT_APP_BACKEND_URL}/api/organizations/update_statusDomain`,
+        { statusDomain },
+        {
+          headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'organizationId': selectedOrg._id
+          },
+        }
+      );
+            
+
+      setSelectedOrg({
+        ...selectedOrg,
+        statusDomain: response.data.organization.statusDomain
+      });
+      
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving domain:', error);
+      // Handle error (could add error state and display to user)
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleCreateOrganization = async () => {
     try {
       const token = await getAccessTokenSilently();
-      
+
       const response = await axios.post(
         `${process.env.REACT_APP_BACKEND_URL}/api/organizations/create`, 
         newOrgData,
@@ -201,18 +235,18 @@ export const Dashboard = () => {
           },
         }
       );
-      
+
       // Update user info with new organization
       const updatedUserInfo = { ...userInfo };
       if (!updatedUserInfo.organizations) {
         updatedUserInfo.organizations = [];
       }
-      
+
       updatedUserInfo.organizations.push(response.data.organization);
       setUserInfo(updatedUserInfo);
       setSelectedOrg(response.data.organization);
       setIsCreateOrgDialogOpen(false);
-      
+
       // Reset form data
       setNewOrgData({
         name: '',
@@ -220,7 +254,7 @@ export const Dashboard = () => {
         info: '',
         employeeCount: ''
       });
-      
+
     } catch (error) {
       console.error('Error creating organization:', error);
       // Handle error (could add error state and display to user)
@@ -294,9 +328,9 @@ export const Dashboard = () => {
     }));
   };
 
-  const handleCreateService = async() => {
+  const handleCreateService = async () => {
     try {
-      if(!newServiceData.name || !newServiceData.description) {
+      if (!newServiceData.name || !newServiceData.description) {
         setCreateServiceError(true);
         return;
       }
@@ -327,26 +361,26 @@ export const Dashboard = () => {
     setIsCreateServiceDialogOpen(false);
   };
 
-  const handleEditService = async() => {
+  const handleEditService = async () => {
     try {
       const token = await getAccessTokenSilently();
       console.log('Selected service:', selectedService);
       const response = await axios.put(
-      `${process.env.REACT_APP_BACKEND_URL}/api/organizations/update_service`,
-      { serviceId: selectedService._id, ...newServiceData },
-      {
-        headers: {
-        'Content-Type': 'application/json',
-        'OrganizationId': selectedOrg._id,
-        'Authorization': `Bearer ${token}`,
-        },
-      }
+        `${process.env.REACT_APP_BACKEND_URL}/api/organizations/update_service`,
+        { serviceId: selectedService._id, ...newServiceData },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'OrganizationId': selectedOrg._id,
+            'Authorization': `Bearer ${token}`,
+          },
+        }
       );
       const updatedService = response.data.service;
       console.log(updatedService);
       console.log(services);
-      const updatedServices = services.map(service => 
-      service._id === updatedService._id ? updatedService : service
+      const updatedServices = services.map(service =>
+        service._id === updatedService._id ? updatedService : service
       );
       setServices(updatedServices);
     } catch (error) {
@@ -361,25 +395,25 @@ export const Dashboard = () => {
     setIsEditServiceDialogOpen(false);
   };
 
-  const handleCreateIncident = async() => {
+  const handleCreateIncident = async () => {
     try {
       console.log(newIncidentData);
-      if(!newIncidentData.title || !newIncidentData.description || !newIncidentData.affectedService) {
+      if (!newIncidentData.title || !newIncidentData.description || !newIncidentData.affectedService) {
         setCreateIncidentError(true);
         return;
       }
       setCreateIncidentError(false);
       const token = await getAccessTokenSilently();
       const response = await axios.post(
-      `${process.env.REACT_APP_BACKEND_URL}/api/organizations/create_incident`,
-      newIncidentData,
-      {
-        headers: {
-        'Content-Type': 'application/json',
-        'OrganizationId': selectedOrg._id,
-        'Authorization': `Bearer ${token}`,
-        },
-      }
+        `${process.env.REACT_APP_BACKEND_URL}/api/organizations/create_incident`,
+        newIncidentData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'OrganizationId': selectedOrg._id,
+            'Authorization': `Bearer ${token}`,
+          },
+        }
       );
       const newIncident = response.data.incident;
       console.log('New incident created:', newIncident);
@@ -397,28 +431,28 @@ export const Dashboard = () => {
     setIsCreateIncidentDialogOpen(false);
   };
 
-  const handleEditIncident = async() => {
+  const handleEditIncident = async () => {
     try {
       const token = await getAccessTokenSilently();
       const response = await axios.put(
-      `${process.env.REACT_APP_BACKEND_URL}/api/organizations/update_incident`,
-      { 
-        incidentId: selectedIncident._id,
-        ...newIncidentData
-      },
-      {
-        headers: {
-        'Content-Type': 'application/json',
-        'OrganizationId': selectedOrg._id,
-        'Authorization': `Bearer ${token}`,
+        `${process.env.REACT_APP_BACKEND_URL}/api/organizations/update_incident`,
+        {
+          incidentId: selectedIncident._id,
+          ...newIncidentData
         },
-      }
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'OrganizationId': selectedOrg._id,
+            'Authorization': `Bearer ${token}`,
+          },
+        }
       );
       const updatedIncident = response.data.incident;
       console.log(updatedIncident)
       console.log(incidents);
-      const updatedIncidents = incidents.map(incident => 
-      incident._id === updatedIncident._id ? updatedIncident : incident
+      const updatedIncidents = incidents.map(incident =>
+        incident._id === updatedIncident._id ? updatedIncident : incident
       );
       setIncidents(updatedIncidents);
     } catch (error) {
@@ -435,20 +469,20 @@ export const Dashboard = () => {
     setIsEditIncidentDialogOpen(false);
   };
 
-  const handleEditOrganization = async() => {
+  const handleEditOrganization = async () => {
     // In a real application, this would make an API call
     try {
       const token = await getAccessTokenSilently();
       const response = await axios.put(
-      `${process.env.REACT_APP_BACKEND_URL}/api/organizations/update`,
-      newOrgData,
-      {
-        headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'organizationId': selectedOrg._id
-        },
-      }
+        `${process.env.REACT_APP_BACKEND_URL}/api/organizations/update`,
+        newOrgData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'organizationId': selectedOrg._id
+          },
+        }
       );
       const updatedOrg = response.data.organization;
       setSelectedOrg(updatedOrg);
@@ -537,7 +571,7 @@ export const Dashboard = () => {
   const getSystemStatusDisplay = () => {
     const status = calculateSystemStatus();
     const statusObj = serviceStatuses.find(s => s.value === status);
-    
+
     return (
       <div className="flex items-center">
         {statusObj?.icon}
@@ -594,7 +628,7 @@ export const Dashboard = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          
+
           {/* Organization selector or create button */}
           {hasOrganizations ? (
             <DropdownMenu>
@@ -610,7 +644,7 @@ export const Dashboard = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   {userInfo.organizations.map((org) => (
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       key={org._id}
                       onClick={() => handleOrgChange(org._id)}
                     >
@@ -632,10 +666,10 @@ export const Dashboard = () => {
             </Button>
           )}
         </div>
-        
+
         {/* Welcome message */}
         <p className="mb-6">Welcome, {user?.name === user?.email ? 'User' : user?.name}!</p>
-        
+
         {/* Show empty state or organization content */}
         {!hasOrganizations ? (
           <Card className="mt-6">
@@ -658,7 +692,7 @@ export const Dashboard = () => {
               <TabsTrigger value="incidents">Incidents</TabsTrigger>
               <TabsTrigger value="organization">Organization</TabsTrigger>
             </TabsList>
-            
+
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -691,11 +725,11 @@ export const Dashboard = () => {
                     <CardTitle className="text-sm font-medium">Uptime</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">99.95%</div>
+                    <div className="text-2xl font-bold">{selectedOrg?.uptime}</div>
                   </CardContent>
                 </Card>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
@@ -723,7 +757,7 @@ export const Dashboard = () => {
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardHeader>
                     <CardTitle>Recent Incidents</CardTitle>
@@ -750,16 +784,16 @@ export const Dashboard = () => {
                   </CardContent>
                 </Card>
               </div>
-              
+
               <div className="flex justify-between">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setActiveTab("services")}
                   className="flex items-center"
                 >
                   Manage Services
                 </Button>
-                <Button 
+                <Button
                   onClick={() => {
                     setActiveTab("incidents");
                     setIsCreateIncidentDialogOpen(true);
@@ -771,7 +805,7 @@ export const Dashboard = () => {
                 </Button>
               </div>
             </TabsContent>
-            
+
             {/* Services Tab */}
             <TabsContent value="services" className="space-y-6">
               <div className="flex justify-between items-center">
@@ -784,7 +818,7 @@ export const Dashboard = () => {
                   Create Service
                 </Button>
               </div>
-              
+
               <Card>
                 <CardContent className="p-0">
                   <Table>
@@ -816,7 +850,7 @@ export const Dashboard = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             {/* Incidents Tab */}
             <TabsContent value="incidents" className="space-y-6">
               <div className="flex justify-between items-center">
@@ -829,7 +863,7 @@ export const Dashboard = () => {
                   Report Incident
                 </Button>
               </div>
-              
+
               <Card>
                 <CardContent className="p-0">
                   <Table>
@@ -863,7 +897,7 @@ export const Dashboard = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             {/* Organization Tab */}
             <TabsContent value="organization" className="space-y-6">
               <div className="flex justify-between items-center">
@@ -876,7 +910,7 @@ export const Dashboard = () => {
                   Edit Organization
                 </Button>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
@@ -911,24 +945,63 @@ export const Dashboard = () => {
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Status Page URL</p>
                       <div className="flex items-center mt-1">
-                        <p className="text-lg">https://status.{selectedOrg?.domain || "yourdomain.com"}</p>
-                        <Button variant="ghost" size="sm" className="ml-2">
-                          <ExternalLink size={16} />
-                        </Button>
+                        <p className="text-lg">
+                          {selectedOrg?.statusDomain
+                            ? `https://${selectedOrg.statusDomain}.statuscode.fun`
+                            : "Not configured"}
+                        </p>
+                        {selectedOrg?.statusDomain && (
+                          <Button variant="ghost" size="sm" className="ml-2">
+                            <ExternalLink size={16} />
+                          </Button>
+                        )}
                       </div>
                     </div>
                     <div className="pt-4">
-                      <Button variant="outline" className="w-full">
-                        View Status Page
-                      </Button>
+                      {selectedOrg?.statusDomain ? (
+                        <Button variant="outline" className="w-full" onClick={() => window.open(`https://${selectedOrg.statusDomain}.statuscode.fun`, '_blank')}>
+                          View Status Page
+                        </Button>
+                      ) : (
+                        <Button variant="outline" className="w-full" onClick={() => setIsEditDialogOpen(true)}>
+                          Set Status Domain
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Dialog for editing status domain */}
+                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Set Status Domain</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Enter a domain for your status page.
+                      </p>
+                      <Input
+                        placeholder="yourdomain.com"
+                        value={statusDomain}
+                        onChange={(e) => setStatusDomain(e.target.value)}
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleSaveDomain} disabled={isSubmitting}>
+                        {isSubmitting ? "Saving..." : "Save"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </TabsContent>
           </Tabs>
         )}
-        
+
         {/* Create Organization Dialog */}
         <Dialog open={isCreateOrgDialogOpen} onOpenChange={setIsCreateOrgDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
@@ -982,7 +1055,7 @@ export const Dashboard = () => {
                 <Label htmlFor="employeeCount" className="text-right">
                   Size
                 </Label>
-                <Select 
+                <Select
                   onValueChange={handleEmployeeCountChange}
                   value={newOrgData.employeeCount}
                 >
@@ -1004,7 +1077,7 @@ export const Dashboard = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        
+
         {/* Edit Organization Dialog */}
         <Dialog open={isEditOrgDialogOpen} onOpenChange={setIsEditOrgDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
@@ -1055,7 +1128,7 @@ export const Dashboard = () => {
                 <Label htmlFor="edit-employeeCount" className="text-right">
                   Size
                 </Label>
-                <Select 
+                <Select
                   onValueChange={handleEmployeeCountChange}
                   value={newOrgData.employeeCount}
                 >
@@ -1077,7 +1150,7 @@ export const Dashboard = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        
+
         {/* Create Service Dialog */}
         <Dialog open={isCreateServiceDialogOpen} onOpenChange={setIsCreateServiceDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
@@ -1086,9 +1159,9 @@ export const Dashboard = () => {
               <DialogDescription>
                 Add a new service to monitor.
               </DialogDescription>
-              {createserviceerror && 
-              <DialogDescription className="text-red-500">
-                Service name and description are required.
+              {createserviceerror &&
+                <DialogDescription className="text-red-500">
+                  Service name and description are required.
                 </DialogDescription>}
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -1122,7 +1195,7 @@ export const Dashboard = () => {
                 <Label htmlFor="service-status" className="text-right">
                   Status
                 </Label>
-                <Select 
+                <Select
                   onValueChange={handleServiceStatusChange}
                   value={newServiceData.status}
                 >
@@ -1147,7 +1220,7 @@ export const Dashboard = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        
+
         {/* Edit Service Dialog */}
         <Dialog open={isEditServiceDialogOpen} onOpenChange={setIsEditServiceDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
@@ -1186,7 +1259,7 @@ export const Dashboard = () => {
                 <Label htmlFor="edit-service-status" className="text-right">
                   Status
                 </Label>
-                <Select 
+                <Select
                   onValueChange={handleServiceStatusChange}
                   value={newServiceData.status}
                 >
@@ -1211,7 +1284,7 @@ export const Dashboard = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        
+
         {/* Create Incident Dialog */}
         <Dialog open={isCreateIncidentDialogOpen} onOpenChange={setIsCreateIncidentDialogOpen} >
           <DialogContent className="sm:max-w-[425px]">
@@ -1220,9 +1293,9 @@ export const Dashboard = () => {
               <DialogDescription>
                 Report a new incident or maintenance.
               </DialogDescription>
-              {createincidenterror && 
-              <DialogDescription className="text-red-500">
-                All fields are required.
+              {createincidenterror &&
+                <DialogDescription className="text-red-500">
+                  All fields are required.
                 </DialogDescription>}
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -1243,7 +1316,7 @@ export const Dashboard = () => {
                 <Label htmlFor="incident-service" className="text-right">
                   Service
                 </Label>
-                <Select 
+                <Select
                   onValueChange={handleIncidentServiceChange}
                   value={newIncidentData.affectedService}
                 >
@@ -1263,7 +1336,7 @@ export const Dashboard = () => {
                 <Label htmlFor="incident-status" className="text-right">
                   Status
                 </Label>
-                <Select 
+                <Select
                   onValueChange={handleIncidentStatusChange}
                   value={newIncidentData.status}
                 >
@@ -1295,8 +1368,8 @@ export const Dashboard = () => {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <div className="col-start-2 col-span-3 flex items-center space-x-2">
-                  <Checkbox 
-                    id="send-email" 
+                  <Checkbox
+                    id="send-email"
                     checked={newIncidentData.sendEmail}
                     onCheckedChange={handleIncidentEmailChange}
                   />
@@ -1309,7 +1382,7 @@ export const Dashboard = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        
+
         {/* Edit Incident Dialog */}
         <Dialog open={isEditIncidentDialogOpen} onOpenChange={setIsEditIncidentDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
@@ -1336,7 +1409,7 @@ export const Dashboard = () => {
                 <Label htmlFor="edit-incident-service" className="text-right">
                   Service
                 </Label>
-                <Select 
+                <Select
                   onValueChange={handleIncidentServiceChange}
                   value={newIncidentData.affectedService}
                 >
@@ -1356,7 +1429,7 @@ export const Dashboard = () => {
                 <Label htmlFor="edit-incident-status" className="text-right">
                   Status
                 </Label>
-                <Select 
+                <Select
                   onValueChange={handleIncidentStatusChange}
                   value={newIncidentData.status}
                 >
@@ -1387,8 +1460,8 @@ export const Dashboard = () => {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <div className="col-start-2 col-span-3 flex items-center space-x-2">
-                  <Checkbox 
-                    id="edit-send-email" 
+                  <Checkbox
+                    id="edit-send-email"
                     checked={newIncidentData.sendEmail}
                     onCheckedChange={handleIncidentEmailChange}
                   />
