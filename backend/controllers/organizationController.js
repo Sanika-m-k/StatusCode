@@ -1,7 +1,7 @@
 // server/controllers/userController.js
 const jwt = require('jsonwebtoken');
-const Organization = require('../models/Organization');
-const User = require('../models/User.js');
+const Organization = require('../models/organization.js');
+const User = require('../models/user.js');
 const Service = require('../models/Service.js');
 const Incident = require('../models/Incident');
 

@@ -1,6 +1,6 @@
 // server/controllers/userController.js
 const { default: mongoose } = require('mongoose');
-const User = require('../models/User');
+const User = require('../models/user');
 
 // Verify user and create if not exists
 const verifyUser = async (req, res) => {
